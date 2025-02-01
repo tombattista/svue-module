@@ -65,7 +65,7 @@ const inputType = process.argv[3];
 const useAbbreviations = inputAction.length == inputType.length == 1;
 
 // Verify correct input action parameter
-if (inputAction != "generate" && !(useAbbreviations && inputAction != "g")) {
+if (inputAction != "generate" && !(useAbbreviations && inputAction == "g")) {
     console.log("Improper parameters specified. First parameter can be either 'generate' or 'g'.");
     process.exit([-1]);
 }
