@@ -1,0 +1,19 @@
+{
+  "name": "svue-module",
+  "version": "1.0.0",
+  "description": "Node module to generate multiple files for new Vue components",
+  "main": "index.js",
+  "type": "module",
+  "bin": {
+    "svue": "./index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "svue-module": "file:"
+  }
+}
