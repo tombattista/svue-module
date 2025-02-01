@@ -13,6 +13,10 @@
  **********************************************************************/
  import fs from 'fs';
 
+ const nameRegExp = /([A-Z][a-z]*[0-9]*){2,}|\-/g;
+ const firstLetterCapitalRegExp = /^[A-Z].*/;
+ const anyLetterCapitalRegExp = /[A-Z]/g;
+
 /*
  * reset: Removes any written content and exits.
  */
@@ -34,6 +38,30 @@ async function createFolder(folderPath) {
             } 
         });
     }
+}
+
+/*
+ * formatObjectName: Function to format object name to have at least two words.
+ */
+function formatObjectName(originalName) {
+    // name must have at least 2 capital letters or at least one hyphen
+    if (originalName.match(nameRegExp)) return originalName;
+    else if (originalName.match(firstLetterCapitalRegExp)) {
+        return `${originalName}${capitalize(validTypes[typeAbbr])}`;
+    }
+    else if (originalName.match(anyLetterCapitalRegExp)) {
+        return capitalize(originalName);
+    }
+    else {
+        return `${originalName}-${validTypes[typeAbbr]}`;
+    }
+}
+
+/*
+ * capitalize: Function to capitalize first letter of word.
+ */
+function capitalize(word) {
+    return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
 /*
@@ -82,7 +110,7 @@ if (!Object.values(validTypes).includes(inputType) && !(useAbbreviations && Obje
 
 // Generate files
 const typeAbbr = inputType[0];
-const newObjectName = process.argv[4];
+const newObjectName = formatObjectName(process.argv[4]);
 const scriptExtension = 'ts';
 const styleExtension = 'css';
 
@@ -102,7 +130,10 @@ const typeTemplates = {
 <script lang="${scriptExtension}" src="./${typeFilenames['c']['script']}"></script>
 <style scoped src="./${typeFilenames['c']['style']}"></style>
         `,
-        html: `<template></template>`,
+        html: `
+        <!-- ${newObjectName} component HTML -->
+        <div></div>
+        `,
         script: `export default {};`,
         style: ``
     }
