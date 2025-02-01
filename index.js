@@ -44,6 +44,8 @@ async function createFolder(folderPath) {
  * formatObjectName: Function to format object name to have at least two words.
  */
 function formatObjectName(originalName) {
+    if (typeAbbr != 'c') return originalName;
+
     // name must have at least 2 capital letters or at least one hyphen
     if (originalName.match(nameRegExp)) return originalName;
     else if (originalName.match(firstLetterCapitalRegExp)) {
@@ -99,7 +101,9 @@ if (inputAction != "generate" && !(useAbbreviations && inputAction == "g")) {
 }
 
 const validTypes = {
-    c: 'component'
+    c: 'component',
+    i: 'interface',
+    m: 'model'
 };
 
 // Verify correct input type parameter
@@ -120,29 +124,42 @@ const typeFilenames = {
         html: `${newObjectName}.template.html`,
         script: `${newObjectName}.script.${scriptExtension}`,
         style: `${newObjectName}.style.${styleExtension}`
-    }
+    },
+    i: { interface: `${newObjectName}.${scriptExtension}`},
+    m: { model: `${newObjectName}.${scriptExtension}`}
 }
 
 const typeTemplates = {
     c: {
-        component: `
+        component: `<!-- ${newObjectName} component -->
 <template src="./${typeFilenames['c']['html']}"></template>
 <script lang="${scriptExtension}" src="./${typeFilenames['c']['script']}"></script>
 <style scoped src="./${typeFilenames['c']['style']}"></style>
         `,
-        html: `
-        <!-- ${newObjectName} component HTML -->
-        <div></div>
+        html: `<!-- ${newObjectName} component HTML -->
+<div></div>
         `,
         script: `export default {};`,
         style: ``
+    },
+    i: {
+        interface: `export interface ${newObjectName} {}`
+    },
+    m: {
+        model: `// ${newObjectName} model
+export default class ${newObjectName} {
+    constructor() {}
+}`
     }
 }
 
 // Write each file to file system
 const workingDirectory = process.cwd();
-var folderPath = `${workingDirectory}\\${newObjectName}`;
-createFolder(folderPath);
+var folderPath = workingDirectory;
+if (Object.keys(typeFilenames[typeAbbr]).length > 1) {
+    folderPath += `\\${newObjectName}`;
+    createFolder(folderPath);
+}
 
 Object.keys(typeFilenames[typeAbbr]).forEach(key => {
     var fileName = `${typeFilenames[typeAbbr][key]}`;
