@@ -137,13 +137,36 @@ const typeTemplates = {
 <style scoped src="./${typeFilenames['c']['style']}"></style>
         `,
         html: `<!-- ${newObjectName} component HTML -->
-<div></div>
+<div><h2>{{ innerTitle }}</h2></div>
         `,
-        script: `export default {};`,
-        style: ``
+        script: `/* ${newObjectName} component script */
+        import { defineComponent } from 'vue';
+
+export default defineComponent({
+  props: ['title'],
+  data() {
+    return {
+      innerTitle: this.title
+    };
+  },
+  watch: {
+    title(newTitleValue) {
+      this.innerTitle = newTitleValue;
+    }
+  },
+  methods: {
+    emitUpdate() {
+      this.$emit('update-title', this.innerTitle);
+    }
+  }
+});
+    `,
+        style: `/* ${newObjectName} styles */`
     },
     i: {
-        interface: `export interface ${newObjectName} {}`
+        interface: `/* ${newObjectName} interface */
+export interface ${newObjectName} {}
+    `
     },
     m: {
         model: `// ${newObjectName} model
