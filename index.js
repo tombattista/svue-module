@@ -140,7 +140,7 @@ const typeTemplates = {
 <div><h2>{{ innerTitle }}</h2></div>
         `,
         script: `/* ${newObjectName} component script */
-        import { defineComponent } from 'vue';
+import { defineComponent } from 'vue';
 
 export default defineComponent({
   props: ['title'],
