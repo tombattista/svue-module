@@ -10,6 +10,11 @@
  * - Example usages within the Vue app terminal (both are valid): 
  *		> svue generate component my-component-name
  *		> svue g c my-component-name
+ * - The following types can be generated:
+ *  - component
+ *  - interface
+ *  - model
+ *  - service
  **********************************************************************/
 import fs from 'fs';
 import inquirer from 'inquirer';
