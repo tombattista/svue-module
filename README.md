@@ -31,7 +31,7 @@
   svue g c my-component-name
   ```
 - The following types can be generated:
-  - component
-  - interface
-  - model
-  - service
+  - c - component
+  - i - interface
+  - m - model
+  - s - service
