@@ -1,3 +1,4 @@
+# Installation
 - Clone project to your local repos directory
 - cd into the svue-module directory
   - Run the following from a new terminal window
