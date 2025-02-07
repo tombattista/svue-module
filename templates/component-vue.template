@@ -1,0 +1,4 @@
+<!-- SearchBox component -->
+<template src="./SVUE_TEMPLATE_NAME.template.html"></template>
+<script lang="ts" src="./SVUE_TEMPLATE_NAME.script.ts"></script>
+<style scoped src="./SVUE_TEMPLATE_NAME.style.SVUE_TEMPLATE_STYLETYPE"></style>

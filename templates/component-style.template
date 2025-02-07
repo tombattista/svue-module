@@ -1,0 +1,4 @@
+/* SVUE_TEMPLATE_NAME styles */
+.component-wrapper {
+    visibility: visible;
+}

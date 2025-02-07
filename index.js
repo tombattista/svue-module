@@ -11,11 +11,202 @@
  *		> svue generate component my-component-name
  *		> svue g c my-component-name
  **********************************************************************/
- import fs from 'fs';
+import fs from 'fs';
+import inquirer from 'inquirer';
+import path from 'path';
 
- const nameRegExp = /([A-Z][a-z]*[0-9]*){2,}|\-/g;
- const firstLetterCapitalRegExp = /^[A-Z].*/;
- const anyLetterCapitalRegExp = /[A-Z]/g;
+/*-----------------------------------------------------------------
+ * Initialization
+ *-----------------------------------------------------------------*/
+const objectTypes = {
+    c: 'component',
+    i: 'interface',
+    m: 'model',
+    s: 'service'
+};
+const fileStructureTypes = [ 'single', 'multi' ];
+let templates = [
+    { name: 'SVUE_TEMPLATE_NAME',      objectType: 'any', structureType: 'any',    definition: { src: '',                          value: '', outputFile: '' } },
+    { name: 'SVUE_TEMPLATE_STYLETYPE', objectType: 'any', structureType: 'any',    definition: { src: '',                          value: '', outputFile: '' } } /* css/scss/sass */,
+    { name: 'SVUE_COMPONENT_VUE',      objectType: 'c',   structureType: 'multi',  definition: { src: 'component-vue.template',    value: '', outputFile: '' } },
+    { name: 'SVUE_COMPONENT_HTML',     objectType: 'c',   structureType: 'multi',  definition: { src: 'component-html.template',   value: '', outputFile: '' } },
+    { name: 'SVUE_COMPONENT_SCRIPT',   objectType: 'c',   structureType: 'multi',  definition: { src: 'component-script.template', value: '', outputFile: '' } },
+    { name: 'SVUE_COMPONENT_STYLE',    objectType: 'c',   structureType: 'multi',  definition: { src: 'component-style.template',  value: '', outputFile: '' } },
+    { name: 'SVUE_COMPONENT',          objectType: 'c',   structureType: 'single', definition: { src: 'component.template',        value: '', outputFile: '' } },
+    { name: 'SVUE_INTERFACE',          objectType: 'i',   structureType: 'single', definition: { src: 'interface.template',        value: '', outputFile: '' } },
+    { name: 'SVUE_MODEL',              objectType: 'm',   structureType: 'single', definition: { src: 'model.template',            value: '', outputFile: '' } },
+    { name: 'SVUE_SERVICE',            objectType: 's',   structureType: 'single', definition: { src: 'service.template',          value: '', outputFile: '' } },
+];
+const nameRegExp = /([A-Z][a-z]*[0-9]*){2,}|\-/g;
+const firstLetterCapitalRegExp = /^[A-Z].*/;
+const anyLetterCapitalRegExp = /[A-Z]/g;
+
+/*-----------------------------------------------------------------
+ * Read command-line args:
+ * argv[0] == location of node.exe in the OS file system
+ * argv[1] == location of svue index.js at time of execution
+ * argv[2] == "generate" or "g"
+ * argv[3] == object type to generate:
+ *  Options:
+ *      - component or c
+ *      - interface or i
+ *      - model or m
+ *      - service or s
+ * argv[4] == user-defined name of object to generate
+ * arg[5] (optional) == "--f=single" or "--f=multi"
+ *  This only applies to object types, such as component, which can
+ *  be split into multiple files to segregate functionality.
+ *      - e.g. my-component.vue can be split into the following:
+ *          - my-component.vue (definition file)
+ *          - my-component.template.html
+ *          - my-component.script.ts
+ *          - mycomponent.style.css
+ *-----------------------------------------------------------------*/
+ 
+// Verify parameter count
+if (process.argv.length < 5) {
+    console.log("Improper parameters specified. Correct syntax is: 'svue generate component my-component-name'.");
+    process.exit([-1]);
+}
+
+// Get svue-module directory and current working directory
+const svueDirectory = path.dirname(process.argv[1]);
+const workingDirectory = process.cwd();
+
+// Verify correct input action parameter
+const inputAction = process.argv[2];
+if (inputAction != "generate" && inputAction != "g") {
+    console.log("Improper parameters specified. First parameter can be either 'generate' or 'g'.");
+    process.exit([-1]);
+}
+
+// Verify correct input type parameter
+const inputType = process.argv[3];
+const useAbbreviations = inputAction.length == inputType.length == 1;
+if (!Object.values(objectTypes).includes(inputType) && !(useAbbreviations && Object.keys(objectTypes).includes(inputType))) {
+    console.log(`Improper parameters specified. Options for second parameter are: [${Object.keys(objectTypes).map((s) => s + " (or '" + objectTypes[s] + "')").join(", ")}].`);
+    process.exit([-1]);
+}
+
+
+// Get file generation parameters
+const typeAbbr = inputType[0];
+const newObjectName = formatObjectName(process.argv[4]);
+const scriptExtension = getProjectScriptType();
+const selectedFileStructureType = getFileStructureType(process.argv);
+const selectedTemplates = templates.filter(t => t.objectType == typeAbbr && t.structureType == selectedFileStructureType);
+
+// Prompt user for style type
+const answers = await inquirer.prompt([{
+        type: 'list',
+        name: 'stylesheetFormat',
+        message: 'Which stylesheet format would you like to use?',
+        choices: ['CSS', 'SCSS', 'Sass'],
+    }]);
+const styleFormat = answers.stylesheetFormat.toLowerCase();
+
+// Initialize template values
+templates.find(t => t.name === 'SVUE_TEMPLATE_NAME').definition.value = newObjectName;
+templates.find(t => t.name === 'SVUE_TEMPLATE_STYLETYPE').definition.value = styleFormat;
+
+// configure output filenames
+setTemplateOutputFile('SVUE_COMPONENT_VUE', `${newObjectName}.vue`);
+setTemplateOutputFile('SVUE_COMPONENT_HTML', `${newObjectName}.template.html`);
+setTemplateOutputFile('SVUE_COMPONENT_SCRIPT', `${newObjectName}.script.${scriptExtension}`);
+setTemplateOutputFile('SVUE_COMPONENT_STYLE', `${newObjectName}.style.${styleFormat}`);
+setTemplateOutputFile('SVUE_COMPONENT', `${newObjectName}.vue`);
+setTemplateOutputFile('SVUE_INTERFACE', `${newObjectName}.${scriptExtension}`);
+setTemplateOutputFile('SVUE_MODEL', `${newObjectName}.${scriptExtension}`);
+setTemplateOutputFile('SVUE_SERVICE', `${newObjectName}.service.${scriptExtension}`);
+
+// Generate new object folder
+let folderPath = workingDirectory
+if (selectedTemplates.length > 1) {
+    folderPath += `\\${newObjectName}`;
+    createFolder(folderPath);
+}
+
+// Write output files
+try {
+    selectedTemplates.forEach((template) => {
+        const content = getTemplateFileContents(template.name);
+        template.definition.value = content == undefined ? '' : content;
+    });
+} catch (err) {
+    console.log(err);
+    process.exit(0);
+}
+
+// Generate each new object file
+selectedTemplates.forEach((template) => {
+    writeFileAsync(folderPath, template.definition.outputFile, template.definition.value, newObjectName);
+});
+
+
+/*-----------------------------------------------------------------
+ * Functions
+ *-----------------------------------------------------------------*/
+/*
+ * setTypeTemplateValue: Sets value of template.
+ */
+function setTypeTemplateValue(name, value) {
+    return templates.find(t => t.name === name);
+}
+
+/*
+ * setTemplateOutputFile: Sets outputFile of template.
+ */
+function setTemplateOutputFile(templateName, outputFileName) {
+    let sTemplate = templates.find(t => t.name === templateName);
+    if (sTemplate == undefined) { return; }
+    sTemplate.definition.outputFile = outputFileName;
+}
+
+/*
+ * getProjectScriptType: Determines whether or not current project
+ *  uses TypeScript.
+ * Returns: 'ts' if typescript is found in package.json, otherwise 'js'.
+ */
+function getProjectScriptType() {
+    var projectType = 'js';
+    try {
+        const packageJson = JSON.parse(getFileContents(`${workingDirectory}/package.json`, 'utf8'));
+        if ((packageJson.devDependencies && packageJson.devDependencies.typescript) ||
+            (packageJson.dependencies && packageJson.dependencies.typescript)) {
+            projectType = 'ts';
+        }
+    } catch (err) {
+        console.error('Error reading package.json:', err);
+    }
+    return projectType;
+}
+
+/*
+ * getFileContents: Returns contents of specified file as a string.
+ */
+function getFileContents(filePath) {
+    try {
+        return fs.readFileSync(filePath, 'utf8');
+    } catch (err) {
+        console.error(err);
+        return '';
+    }
+}
+
+/*
+ * replaceTemplateStrings: Returns contents with template strings replaced by
+ *  additional content.
+ */
+function replaceTemplateStrings(content) {
+    let newContent = content;
+    templates.forEach((t) => {
+        if (newContent.indexOf(t.name) != -1) {
+            newContent = newContent.replaceAll(t.name, t.definition.value);
+            newContent = replaceTemplateStrings(newContent);
+        }
+    });
+    return newContent;
+}
 
 /*
  * reset: Removes any written content and exits.
@@ -49,13 +240,13 @@ function formatObjectName(originalName) {
     // name must have at least 2 capital letters or at least one hyphen
     if (originalName.match(nameRegExp)) return originalName;
     else if (originalName.match(firstLetterCapitalRegExp)) {
-        return `${originalName}${capitalize(validTypes[typeAbbr])}`;
+        return `${originalName}${capitalize(objectTypes[typeAbbr])}`;
     }
     else if (originalName.match(anyLetterCapitalRegExp)) {
         return capitalize(originalName);
     }
     else {
-        return `${originalName}-${validTypes[typeAbbr]}`;
+        return `${originalName}-${objectTypes[typeAbbr]}`;
     }
 }
 
@@ -64,6 +255,26 @@ function formatObjectName(originalName) {
  */
 function capitalize(word) {
     return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+/*
+ * getTemplateFileContents: Gets the content associated with the template type
+ */
+function getTemplateFileContents(templateName) {
+    const template = templates.find(t => t.name == templateName);
+    const filePath = `${svueDirectory}/templates/${template.definition.src}`;
+    const contents = getFileContents(filePath);
+    return replaceTemplateStrings(contents);
+}
+
+/*
+ * getFileStructureType: retrieves .
+ */
+function getFileStructureType(argv) {
+    var parts = argv == null || argv.length < 6 ? [] : argv[5].split('=');
+    if (parts.length != 2 || parts[0].toLowerCase() != '--f') { return fileStructureTypes[0]; }
+
+    return fileStructureTypes[1 & (fileStructureTypes.indexOf(parts[1].toLowerCase()) == 1)];
 }
 
 /*
@@ -83,109 +294,3 @@ async function writeFileAsync(folderPath, fileName, fileContent, newObjectName) 
         console.error(`An error occurred while generating ${filePath}:`, error);
     }
 }
- 
-// Verify parameter count
-if (process.argv.length != 5) {
-    console.log("Improper parameters specified. Correct syntax is: 'svue generate component my-component-name'.");
-    process.exit([-1]);
-}
-
-const inputAction = process.argv[2];
-const inputType = process.argv[3];
-const useAbbreviations = inputAction.length == inputType.length == 1;
-
-// Verify correct input action parameter
-if (inputAction != "generate" && !(useAbbreviations && inputAction == "g")) {
-    console.log("Improper parameters specified. First parameter can be either 'generate' or 'g'.");
-    process.exit([-1]);
-}
-
-const validTypes = {
-    c: 'component',
-    i: 'interface',
-    m: 'model'
-};
-
-// Verify correct input type parameter
-if (!Object.values(validTypes).includes(inputType) && !(useAbbreviations && Object.keys(validTypes).includes(inputType))) {
-    console.log(`Improper parameters specified. Options for second parameter are: [${Object.keys(validTypes).map((s) => s + " (or '" + validTypes[s] + "')").join(", ")}].`);
-    process.exit([-1]);
-}
-
-// Generate files
-const typeAbbr = inputType[0];
-const newObjectName = formatObjectName(process.argv[4]);
-const scriptExtension = 'ts';
-const styleExtension = 'css';
-
-const typeFilenames = {
-    c: {
-        component: `${newObjectName}.vue`,
-        html: `${newObjectName}.template.html`,
-        script: `${newObjectName}.script.${scriptExtension}`,
-        style: `${newObjectName}.style.${styleExtension}`
-    },
-    i: { interface: `${newObjectName}.${scriptExtension}`},
-    m: { model: `${newObjectName}.${scriptExtension}`}
-}
-
-const typeTemplates = {
-    c: {
-        component: `<!-- ${newObjectName} component -->
-<template src="./${typeFilenames['c']['html']}"></template>
-<script lang="${scriptExtension}" src="./${typeFilenames['c']['script']}"></script>
-<style scoped src="./${typeFilenames['c']['style']}"></style>
-        `,
-        html: `<!-- ${newObjectName} component HTML -->
-<div><h2>{{ innerTitle }}</h2></div>
-        `,
-        script: `/* ${newObjectName} component script */
-import { defineComponent } from 'vue';
-
-export default defineComponent({
-  props: ['title'],
-  data() {
-    return {
-      innerTitle: this.title
-    };
-  },
-  watch: {
-    title(newTitleValue) {
-      this.innerTitle = newTitleValue;
-    }
-  },
-  methods: {
-    emitUpdate() {
-      this.$emit('update-title', this.innerTitle);
-    }
-  }
-});
-    `,
-        style: `/* ${newObjectName} styles */`
-    },
-    i: {
-        interface: `/* ${newObjectName} interface */
-export interface ${newObjectName} {}
-    `
-    },
-    m: {
-        model: `// ${newObjectName} model
-export default class ${newObjectName} {
-    constructor() {}
-}`
-    }
-}
-
-// Write each file to file system
-const workingDirectory = process.cwd();
-var folderPath = workingDirectory;
-if (Object.keys(typeFilenames[typeAbbr]).length > 1) {
-    folderPath += `\\${newObjectName}`;
-    createFolder(folderPath);
-}
-
-Object.keys(typeFilenames[typeAbbr]).forEach(key => {
-    var fileName = `${typeFilenames[typeAbbr][key]}`;
-    var fileContent = typeTemplates[typeAbbr][key];
-    writeFileAsync(folderPath, fileName, fileContent, newObjectName);
-});

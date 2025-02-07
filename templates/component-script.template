@@ -1,0 +1,30 @@
+/* SVUE_TEMPLATE_NAME component script */
+import { defineComponent, ref } from 'vue';
+
+export default defineComponent({
+    props: ['title'],
+    data() {
+        // Data fields
+        const titleValue = ref<string>(this.title);
+        const dataValue = ref<string>('');
+
+        // Public handlers
+        const setData = (data: string) => {
+            dataValue = data;
+            this.emitDataUpdated();
+        }
+
+        // Expose public entities
+        return {
+            titleValue,
+            dataValue,
+            setData
+        }
+    },
+    watch: {},
+    methods: {
+        emitDataUpdated() {
+            this.$emit('onDataUpdated', this.dataValue);
+        }
+    }
+});

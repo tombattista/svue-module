@@ -1,0 +1,11 @@
+<template>
+SVUE_COMPONENT_HTML
+</template>
+
+<script lang="ts">
+SVUE_COMPONENT_SCRIPT
+</script>
+
+<style scoped>
+SVUE_COMPONENT_STYLE
+</style>

@@ -1,0 +1,7 @@
+/* SVUE_COMPONENT_NAME service */
+const SVUE_COMPONENT_NAME = {
+    // Methods
+
+};
+
+export default SVUE_COMPONENT_NAME;
